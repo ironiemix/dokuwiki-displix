@@ -17,20 +17,20 @@ require_once DOKU_PLUGIN.'syntax.php';
 
 class syntax_plugin_displix extends DokuWiki_Syntax_Plugin {
     public function getType() {
-        return 'FIXME: container|baseonly|formatting|substition|protected|disabled|paragraphs';
+        return 'substition';
     }
 
     public function getPType() {
-        return 'FIXME: normal|block|stack';
+        return 'block';
     }
 
     public function getSort() {
-        return FIXME;
+        return 222;
     }
 
 
     public function connectTo($mode) {
-        $this->Lexer->addSpecialPattern('<FIXME>',$mode,'plugin_displix');
+        $this->Lexer->addSpecialPattern('\{\{displix\}\}',$mode,'plugin_displix');
 //        $this->Lexer->addEntryPattern('<FIXME>',$mode,'plugin_displix');
     }
 
@@ -46,6 +46,13 @@ class syntax_plugin_displix extends DokuWiki_Syntax_Plugin {
 
     public function render($mode, &$renderer, $data) {
         if($mode != 'xhtml') return false;
+        if (!$myhf =& plugin_load('helper', 'displix')) return false;
+
+        // disable caching
+        $renderer->info['cache'] = false;
+
+        $renderer->doc .= "Hallo Displix";
+        $renderer->doc .= $myhf->untis2timesub("/home/linuxmuster-portfolio/data/media/untis.csv","/home/linuxmuster-portfolio/data/media/out.csv");
 
         return true;
     }
