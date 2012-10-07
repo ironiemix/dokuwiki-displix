@@ -12,8 +12,9 @@ if (!defined('DOKU_INC')) die();
 if (!defined('DOKU_LF')) define('DOKU_LF', "\n");
 if (!defined('DOKU_TAB')) define('DOKU_TAB', "\t");
 if (!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
+if (!defined('DOKU_PLUGIN_DISPLIX_TEMPLATES')) define('DOKU_PLUGIN_DISPLIX_TEMPLATES', DOKU_PLUGIN.'displix/tpl');
 
-class helper_plugin_displix extends DokuWiki_Plugin {
+class  helper_plugin_displix extends DokuWiki_Plugin {
 
 
 function getMethods(){
@@ -64,8 +65,10 @@ function getMethods(){
  * Version  -> ?? am Qg stets "0"
  */
 function untis2timesub ($infile, $outfile) {
-    $outhandle = fopen("$outfile", "w");
-    fwrite($outhandle,"ID,Datum,Datumkurz,F1,F2,F3,F4,F5,F6,F7,F8,Version\n");
+    $outhandle_aula = fopen("${outfile}_aula.csv", "w");
+    $outhandle_lehrer = fopen("${outfile}_lehrer.csv", "w");
+    fwrite($outhandle_aula,"ID,Datum,Datumkurz,F1,F2,F3,F4,F5,F6,F7,F8,Version\n");
+    fwrite($outhandle_lehrer,"ID,Datum,Datumkurz,F1,F2,F3,F4,F5,F6,F7,F8,Version\n");
 
     // FIXME to config
     $fs=";";
@@ -81,6 +84,7 @@ function untis2timesub ($infile, $outfile) {
             $tsKlassen      = str_replace("~",",",$data[14]); # F1
             $tsStunde       = $data[2] . ".";  # F2
             $tsLeFa         = "$data[5] / $data[7]"; # Lehrer / Fach F3
+            $tsLehrer         = $data[5]; # Lehrer
             $tsVertretung   = "$data[6]" ; # Vertretender Lehrer F4
             # Vertretungsfach F5
             $tsVFach        = $data[19] == "L" || $data[19] == "C" ? "entfällt" : "$data[9]" ;
@@ -88,7 +92,7 @@ function untis2timesub ($infile, $outfile) {
             $tsBemerkung    = $data[16];
             $tsKuerzel      = $data[5];
 
-            # Build csv output
+            # Build csv output for aula file
             $outline  = $tsID .',';
             $outline .= '"' . $tsDatum . '","';
             $outline .= $tsDatumkurz .'","';
@@ -102,14 +106,122 @@ function untis2timesub ($infile, $outfile) {
             $outline .= $tsKuerzel .'","';     # F8
             $outline .= "0\n";
             #Write to file
-            fwrite($outhandle, $outline);
+            fwrite($outhandle_aula, $outline);
+
+            # Build csv output for lehrerzimmer file
+            $outline  = $tsID .',';
+            $outline .= '"' . $tsDatum . '","';
+            $outline .= $tsDatumkurz .'","';
+            $outline .= $tsLehrer .'","';
+            $outline .= $tsStunde .'","';  
+            $outline .= $tsKlassen .'","';
+            $outline .= $tsVFach .'","'; 
+            $outline .= $tsRaum .'","'; 
+            $outline .= $tsKuerzel .'","';
+            $outline .= $tsVertretung .'","';
+            $outline .= $tsBemerkung .'","';
+            $outline .= "0\n";
+            #Write to file
+            fwrite($outhandle_lehrer, $outline);
         }
         fclose($handle);
     }
 
-    fclose($outhandle);
+    fclose($outhandle_aula);
+    fclose($outhandle_lehrer);
     return "";
 }
+
+
+function get_teachertable($timsub_lehrer_csv, $showdate="") {
+
+
+$showdate = "20120920";
+$dpts = str_split($showdate, 2);
+$contentArray["DATUMLANG"]  = $dpts[3] . '.' .$dpts[2] . '.' . $dpts[0] . $dpts[1];
+
+$substitutions = $this->_file2array($timsub_lehrer_csv, $showdate);
+
+foreach ($substitutions as $subst) {
+    $contentArray["CONTENT"] .= $this->_parse_template("lehrer_table_row", $subst);
+}
+$contentArray["ABWKLASSEN"] = "12, 13 ,14";
+$returnContent .= $this->_parse_template("lehrer_main", $contentArray);
+return $returnContent;
+
+
+
+}
+
+/*
+ *  First line has to be the fieldnames
+ */
+function _file2array($filename, $showdate="") {
+
+    $line = 0;
+    $fs =",";
+    if (($handle = fopen("$filename", "r")) !== FALSE) {
+        while (($data = fgetcsv($handle, 1000, $fs)) !== FALSE) {
+            if ( $line == 0 ) {
+                $correct_fieldcount = count($data);
+                $fields = $data;
+                $line++;
+                continue;
+            }
+
+            $fieldcount = count($data);
+            if ( $fieldcount != $correct_fieldcount ) continue;
+
+            for ($i=0; $i<=$fieldcount-1; $i++) {
+                $returnarray[$line-1][$fields[$i]] = $data[$i];
+            }
+
+            if ( $showdate != "" && $returnarray[$line-1]["Datum"] != $showdate ){
+                array_pop($returnarray);
+            } else {
+                $line++;
+            }
+        }
+    fclose($handle);
+    }
+
+    return $returnarray;
+
+}
+
+
+/**
+  *  Parses the arry in the givven template
+  *
+  *  @params template file to use, array to parse, type (file, string)
+  *  @return $html
+ **/
+function _parse_template($template, $array, $type="file") {
+
+    $html = "";
+    if ($type == "file" ) {
+        $templateFile = DOKU_PLUGIN_DISPLIX_TEMPLATES . "/$template" . ".tpl";
+        if ( ! file_exists($templateFile)) {
+            #print "$templateFile not found";
+            return $html;
+        }
+        #print "Parsing into $templateFile";
+        $fileCont = file_get_contents("$templateFile");
+        $html = $fileCont;
+    } else {
+        $html = $template;
+    }
+
+    foreach(array_keys($array) as $key) {
+         $search = "###" . $key . "###";
+         $value = $array["$key"];
+         #print "$search --- $value <br>";
+         $html = str_replace("$search","$value", "$html");
+    }
+    return $html;
+}
+
+
 
 
 }

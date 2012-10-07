@@ -52,7 +52,8 @@ class syntax_plugin_displix extends DokuWiki_Syntax_Plugin {
         $renderer->info['cache'] = false;
 
         $renderer->doc .= "Hallo Displix";
-        $renderer->doc .= $myhf->untis2timesub("/home/linuxmuster-portfolio/data/media/untis.csv","/home/linuxmuster-portfolio/data/media/out.csv");
+        $renderer->doc .= $myhf->get_teachertable("/home/linuxmuster-portfolio/data/media/timesub-lehrer.csv");
+        
 
         return true;
     }
