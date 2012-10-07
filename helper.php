@@ -16,7 +16,6 @@ if (!defined('DOKU_PLUGIN_DISPLIX_TEMPLATES')) define('DOKU_PLUGIN_DISPLIX_TEMPL
 
 class  helper_plugin_displix extends DokuWiki_Plugin {
 
-
 function getMethods(){
     $result = array();
     $result[] = array(
@@ -64,17 +63,22 @@ function getMethods(){
  * F8       -> Lehrerkürzel z.B. "Mue"
  * Version  -> ?? am Qg stets "0"
  */
-function untis2timesub ($infile, $outfile) {
-    $outhandle_aula = fopen("${outfile}_aula.csv", "w");
-    $outhandle_lehrer = fopen("${outfile}_lehrer.csv", "w");
+function untis2timesub ($input_basename) {
+
+    global $conf;
+    $input_basename = str_replace(":","/",$input_basename);
+    $input_basename  = str_replace("//","/", $conf['savedir'] . "/media/" . $input_basename);
+    $outhandle_aula = fopen("${input_basename}-aula.csv", "w");
+    $outhandle_lehrer = fopen("${input_basename}-lehrer.csv", "w");
     fwrite($outhandle_aula,"ID,Datum,Datumkurz,F1,F2,F3,F4,F5,F6,F7,F8,Version\n");
     fwrite($outhandle_lehrer,"ID,Datum,Datumkurz,F1,F2,F3,F4,F5,F6,F7,F8,Version\n");
 
     // FIXME to config
     $fs=";";
 
-    if (($handle = fopen("$infile", "r")) !== FALSE) {
+    if (($handle = fopen("${input_basename}-untis.csv", "r")) !== FALSE) {
         while (($data = fgetcsv($handle, 1000, $fs)) !== FALSE) {
+            $outline="";
 
             $tsID           = $data[0]; # ID
             $tsDatum        = $data[1]; # Datum 20120912
@@ -103,8 +107,8 @@ function untis2timesub ($infile, $outfile) {
             $outline .= $tsVFach .'","';     # F5
             $outline .= $tsRaum .'","';     # F6
             $outline .= $tsBemerkung .'","';     # F7
-            $outline .= $tsKuerzel .'","';     # F8
-            $outline .= "0\n";
+            $outline .= $tsKuerzel .'",';     # F8
+            $outline .= "0";
             #Write to file
             fwrite($outhandle_aula, $outline);
 
@@ -119,7 +123,7 @@ function untis2timesub ($infile, $outfile) {
             $outline .= $tsRaum .'","'; 
             $outline .= $tsKuerzel .'","';
             $outline .= $tsVertretung .'","';
-            $outline .= $tsBemerkung .'","';
+            $outline .= $tsBemerkung .'",';
             $outline .= "0\n";
             #Write to file
             fwrite($outhandle_lehrer, $outline);
@@ -133,23 +137,48 @@ function untis2timesub ($infile, $outfile) {
 }
 
 
-function get_teachertable($timsub_lehrer_csv, $showdate="") {
+function get_teachertable($input_basename, $showdate="") {
+    global $conf;
+
+    
+    $input_basename = str_replace(":","/",$input_basename);
+    $lehrersub_csv  = str_replace("//","/", $conf['savedir'] . "/media/" . $input_basename ."-lehrer.csv");
+    $lehrerinfo_csv = str_replace("//","/", $conf['savedir'] . "/media/" . $input_basename ."-lehrer-info.csv");
 
 
-$showdate = "20120920";
-$dpts = str_split($showdate, 2);
-$contentArray["DATUMLANG"]  = $dpts[3] . '.' .$dpts[2] . '.' . $dpts[0] . $dpts[1];
 
-$substitutions = $this->_file2array($timsub_lehrer_csv, $showdate);
+    $showdate = "20110912";
+    $dpts = str_split($showdate, 2);
+    $contentArray["DATUMLANG"]  = $dpts[3] . '.' .$dpts[2] . '.' . $dpts[0] . $dpts[1];
 
-foreach ($substitutions as $subst) {
-    $contentArray["CONTENT"] .= $this->_parse_template("lehrer_table_row", $subst);
-}
-$contentArray["ABWKLASSEN"] = "12, 13 ,14";
-$returnContent .= $this->_parse_template("lehrer_main", $contentArray);
-return $returnContent;
+    $substitutions = $this->_file2array($lehrersub_csv, $showdate);
+    $infos = $this->_file2array($lehrerinfo_csv, $showdate);
 
+    $actualTeacher = "";
+    $cssclass = "zwei";
+    foreach ($substitutions as $subst) {
+        if ($subst["F1"] != "$actualTeacher" ) {
+            $subst["CLASS"] = $cssclass == "eins" ? "zwei" : "eins";
+            $cssclass = $subst["CLASS"];
+            $actualTeacher = $subst["F1"];
+        }
+        $subst["CLASS"] = $cssclass;
 
+        $contentArray["CONTENT"] .= $this->_parse_template("lehrer_table_row", $subst);
+    }
+
+    $contentArray["ABWKLASSEN"] = $infos[0]["AbwKlassen"];
+    $contentArray["ABWKURSE"] = $infos[0]["AbwKurse"];
+    $contentArray["ABWLEHRER"] = $infos[0]["AbwLehrer"];
+    $contentArray["BLOCKRAUM"] = $infos[0]["FehlRäume"];
+    $contentArray["BITTEBEACHTEN"] = $infos[0]["BitteBeachten"];
+    $contentArray["VERSION"] = $infos[0]["Version"];
+    $contentArray["LETZTEAEND"] = $infos[0]["Druckdatum"];
+    $contentArray["UEBERSCHRIFT"] = $infos[0]["Ueberschrift"];
+    $contentArray["SCHULNAME"] = $infos[0]["Schulname"];
+
+    $returnContent .= $this->_parse_template("lehrer_main", $contentArray, "file");
+    return $returnContent;
 
 }
 
@@ -188,7 +217,6 @@ function _file2array($filename, $showdate="") {
     return $returnarray;
 
 }
-
 
 /**
   *  Parses the arry in the givven template

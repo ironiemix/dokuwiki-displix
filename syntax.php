@@ -30,7 +30,8 @@ class syntax_plugin_displix extends DokuWiki_Syntax_Plugin {
 
 
     public function connectTo($mode) {
-        $this->Lexer->addSpecialPattern('\{\{displix\}\}',$mode,'plugin_displix');
+        $this->Lexer->addSpecialPattern('\{\{timesub>.+?\}\}',$mode,'plugin_displix');
+        $this->Lexer->addSpecialPattern('\{\{untis>.+?\}\}',$mode,'plugin_displix');
 //        $this->Lexer->addEntryPattern('<FIXME>',$mode,'plugin_displix');
     }
 
@@ -39,9 +40,12 @@ class syntax_plugin_displix extends DokuWiki_Syntax_Plugin {
 //    }
 
     public function handle($match, $state, $pos, &$handler){
-        $data = array();
 
-        return $data;
+        $match = substr($match, 2, -2);
+        list($type, $match) = split('>', $match, 2);
+        list($input_basename, $options) = split('&', $match, 2);
+        return array($type, $input_basename, $options);
+
     }
 
     public function render($mode, &$renderer, $data) {
@@ -51,8 +55,14 @@ class syntax_plugin_displix extends DokuWiki_Syntax_Plugin {
         // disable caching
         $renderer->info['cache'] = false;
 
-        $renderer->doc .= "Hallo Displix";
-        $renderer->doc .= $myhf->get_teachertable("/home/linuxmuster-portfolio/data/media/timesub-lehrer.csv");
+        $type = $data[0];
+        $input_basename = $data[1];
+
+        if( $type == "untis" ) {
+            $myhf->untis2timesub($input_basename);
+        }
+        
+        $renderer->doc .= $myhf->get_teachertable($input_basename);
         
 
         return true;

@@ -1,9 +1,6 @@
-<div id="tsmenu">
-###TMENU###
-</div>
-<br />
-<h2>Vertretungen AEG Reutlingen, ###DATUMLANG###</h2>
-<p class="info">###LETZTEAEND###</p>
+<h1>###UEBERSCHRIFT### ###DATUMLANG###</h1>
+
+<p class="info">###SCHULNAME### -- ###VERSION### ###LETZTEAEND###</p>
 
 <table class="timesub" cellpadding="0" cellspacing="0" border="0">
 <tr>
