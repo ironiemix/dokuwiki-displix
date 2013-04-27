@@ -43,8 +43,8 @@ class syntax_plugin_displix extends DokuWiki_Syntax_Plugin {
 
         $match = substr($match, 2, -2);
         list($type, $match) = split('>', $match, 2);
-        list($input_basename, $options) = split('&', $match, 2);
-        return array($type, $input_basename, $options);
+        list($input, $options) = split('#', $match, 2);
+        return array($type, $input, $options);
 
     }
 
@@ -56,13 +56,18 @@ class syntax_plugin_displix extends DokuWiki_Syntax_Plugin {
         $renderer->info['cache'] = false;
 
         $type = $data[0];
-        $input_basename = $data[1];
+        $input = $data[1];
 
-        if( $type == "untis" ) {
-            $myhf->untis2timesub($input_basename);
-        }
+        if( $type == "untis" && $this->getConf('untisFormat') == "csv" ) {
+            $myhf->untis2timesub($input);
+        } 
+
+        if( $type == "untis" && $this->getConf('untisFormat') == "html" ) {
+            $renderer->doc .= $myhf->untisReadHtml($input);
+        } 
+
         
-        $renderer->doc .= $myhf->get_teachertable($input_basename);
+        //$renderer->doc .= $myhf->get_teachertable($input_basename);
         
 
         return true;

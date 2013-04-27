@@ -14,6 +14,9 @@ if (!defined('DOKU_TAB')) define('DOKU_TAB', "\t");
 if (!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
 if (!defined('DOKU_PLUGIN_DISPLIX_TEMPLATES')) define('DOKU_PLUGIN_DISPLIX_TEMPLATES', DOKU_PLUGIN.'displix/tpl');
 
+// simple html dom parser
+require(DOKU_PLUGIN."/displix/simple_html_dom.php");
+
 class  helper_plugin_displix extends DokuWiki_Plugin {
 
 function getMethods(){
@@ -181,6 +184,105 @@ function get_teachertable($input_basename, $showdate="") {
     return $returnContent;
 
 }
+
+/*
+ * Reads Untis HTML Output
+ */
+function untisReadHtml ($input_path ) {
+    global $conf;
+    $input_path .= "/";
+    $input_path = str_replace(":","/",$input_path);
+    $input_path = str_replace("//","/", $conf['savedir'] . "/media/" . $input_path);
+    $html_file = $input_path . "subst_001.htm";
+
+    // lesen des html files
+    $html = file_get_html("$html_file");
+    $html_output = "";
+
+    // aktualisierungszeit
+    $res = $html->find("table.mon_head tr td[align=right] p");
+    $last_updated = $res[0]->plaintext;
+    $last_updated = explode("and:", $last_updated);
+    $last_updated = $last_updated[1];
+    $html_output .= "<div class=\"untishead\">Stand: " . $last_updated . "</div>";
+
+    // überschrift
+    $res = $html->find("div.mon_title");
+    $tagestitel = $res[0]->plaintext;
+    $tagestitel = explode(" ",$tagestitel);
+    $tagestitel = $tagestitel[1] . " " . $tagestitel[0];
+    $html_output .= "<h1>Vertretungen für $tagestitel</h1>";
+
+    // tagesnachrichten
+    foreach ($html->find("table.info") as $table) {
+        $html_output .= "<table class=\"substinfo\">";
+        foreach ($table->find("tr") as $row ) {
+                $html_output .= "<tr>";
+                foreach ($row->find("td") as $tdata ) {
+                    $html_output .= "<td>" . $tdata->plaintext . "</td>";
+                }
+            }
+            $html_output .= "</tr>";
+        }
+        $html_output .= "</table>";
+
+    // lesen der vertretungsliste
+    $lehrer = "";
+    $trclass = "header";
+    foreach ($html->find("table.mon_list") as $table) {
+        $html_output .= "<table class=\"sublist\">";
+        foreach ($table->find("tr") as $row ) {
+            $html_output .= "<tr class=\"$trclass\">";
+            if ( $res = $row->find('td[colspan=11]')) {
+                $lehrer = $res[0]->plaintext;
+                $lehrer = explode(" ", $lehrer);
+                $lehrer = $lehrer[0];
+                $trclass = $trclass == "eins" ? "zwei" : "eins";
+            } else {
+                if ($row->find("td") ){
+                    $html_output .= "<td>$lehrer</td>";
+                }
+                if ($row->find("th") ){
+                    $html_output .= "<th>$lehrer</th>";
+                }
+                foreach ($row->find("th") as $tdata ) {
+                    $html_output .= "<th>" . $tdata->plaintext . "</th>";
+                }
+                foreach ($row->find("td") as $tdata ) {
+                    $html_output .= "<td>" . $tdata->plaintext . "</td>";
+                }
+            }
+            $html_output .= "</tr>";
+        }
+        $html_output .= "</table>";
+    }
+
+    //speicher freigeben
+    $html->clear();
+
+    return $html_output;
+}
+
+/*
+ * Gets all untis subst files
+ */
+function _getUntisFiles($dir,$dirpattern) {
+    $handle =  opendir($dir);
+    while ($datei = readdir($handle)) {
+        if ($datei != "." && $datei != "..") {
+            if (is_dir($dir.$datei)) {
+                $this->_getUntisFiles($dir.$datei.'/',$dirpattern);
+            } else {
+                $datei = $dir . $datei;
+                if (strstr($datei, $dirpattern)) {
+                    $input_files[] = $datei;
+                }
+            }
+        }
+    }
+    closedir($handle);
+}
+
 
 /*
  *  First line has to be the fieldnames

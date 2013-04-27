@@ -42,5 +42,7 @@ a.ts_active_day {
     }
 
 
-table.timesub { border: 1px solid black; width: 100%;}
+table.sublist { border: 1px solid black; width: 100%;}
+div.untishead {font-size: 80%; text-align:right;}
+
 
