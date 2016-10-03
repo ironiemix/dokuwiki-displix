@@ -1,0 +1,23 @@
+
+div#displix {
+  border: 0;;
+  padding: 0;
+  margin: 0;
+  height: 100%;
+}
+
+div#displix h1, div#displix h2, div#displix h3, div#displix h4 {
+  color: #246ab2;
+}
+
+div#displixrow {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font-size: 2em;
+}
+
+hr.clear {
+  height: 0px;
+  clear: both;
+}

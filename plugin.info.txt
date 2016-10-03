@@ -1,7 +1,0 @@
-base   displix
-author Frank Schiebel
-email  frank@linuxmuster.net
-date   2012-10-03
-name   displix plugin
-desc   A simple public display plugin for DokuWiki with focus on displaying substitution tables in schools
-url    https://github.com/ironiemix
